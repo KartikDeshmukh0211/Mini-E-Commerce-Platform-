@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Fallback image URL
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000";
+
 function ProductsList() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -8,12 +11,14 @@ function ProductsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('newest');
   const [viewMode, setViewMode] = useState('grid');
+  const [originalProducts, setOriginalProducts] = useState([]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const response = await axios.get('http://localhost:5000/products');
       setProducts(response.data);
+      setOriginalProducts(response.data);
       setError('');
     } catch (err) {
       setError('Failed to fetch products. Please try again later.');
@@ -27,29 +32,108 @@ function ProductsList() {
     fetchProducts();
   }, []);
 
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      fetchProducts();
+  // Function to perform contextual search
+  const performContextualSearch = (query) => {
+    if (!query.trim()) {
+      setProducts(originalProducts);
       return;
     }
     
-    try {
-      setLoading(true);
-      const response = await axios.get(`http://localhost:5000/products/search?term=${searchTerm}`);
-      setProducts(response.data);
-      setError('');
-    } catch (err) {
-      setError('Failed to search products. Please try again later.');
-      console.error('Error searching products:', err);
-    } finally {
-      setLoading(false);
+    // Break the search query into keywords
+    const keywords = query.toLowerCase().split(/\s+/);
+    
+    // Filter products based on keyword matching in name or description
+    const results = originalProducts.filter(product => {
+      const nameMatch = keywords.some(keyword => 
+        product.name.toLowerCase().includes(keyword)
+      );
+      
+      const descriptionMatch = keywords.some(keyword => 
+        product.description.toLowerCase().includes(keyword)
+      );
+      
+      // Additional contextual matching logic
+      // Check if the search terms relate to common product attributes
+      const contextMatch = checkContextMatch(keywords, product);
+      
+      return nameMatch || descriptionMatch || contextMatch;
+    });
+    
+    setProducts(results);
+  };
+
+  // Helper function for contextual matching
+  const checkContextMatch = (keywords, product) => {
+    // Dictionary of contextual terms and their related product attributes
+    const contextualMap = {
+      // Seating related terms
+      'sit': ['chair', 'sofa', 'couch', 'bench', 'stool', 'seating'],
+      'seat': ['chair', 'sofa', 'couch', 'bench', 'stool', 'seating'],
+      'comfortable': ['sofa', 'chair', 'couch', 'mattress', 'bed', 'pillow'],
+      'relax': ['sofa', 'chair', 'couch', 'bed', 'lounge'],
+      
+      // Storage related terms
+      'store': ['shelf', 'cabinet', 'drawer', 'storage', 'box'],
+      'organize': ['shelf', 'cabinet', 'drawer', 'storage', 'organizer'],
+      
+      // Display related terms
+      'display': ['tv', 'monitor', 'screen', 'shelf', 'stand'],
+      'watch': ['tv', 'television', 'monitor', 'screen'],
+      
+      // Kitchen related terms
+      'cook': ['stove', 'oven', 'cooker', 'pan', 'pot', 'kitchen'],
+      'food': ['refrigerator', 'fridge', 'oven', 'kitchen'],
+      
+      // Work related terms
+      'work': ['desk', 'table', 'chair', 'office', 'computer'],
+      'study': ['desk', 'table', 'chair', 'book', 'lamp'],
+      
+      // Price related terms
+      'cheap': ['affordable', 'budget', 'inexpensive', 'low-price'],
+      'expensive': ['premium', 'luxury', 'high-end', 'quality'],
+      
+      // Color related terms
+      'dark': ['black', 'brown', 'gray', 'navy'],
+      'light': ['white', 'beige', 'cream', 'light'],
+      
+      // Material related terms
+      'wooden': ['wood', 'timber', 'oak', 'pine', 'maple'],
+      'metal': ['steel', 'aluminum', 'iron', 'metallic'],
+      
+      // Family related terms
+      'family': ['sofa', 'dining', 'table', 'large', 'spacious', 'set']
+    };
+    
+    // Check each keyword against our contextual map
+    for (const keyword of keywords) {
+      // If the keyword is in our contextual map
+      if (contextualMap[keyword]) {
+        // Check if any of the related terms appear in the product name or description
+        const relatedTerms = contextualMap[keyword];
+        const nameMatch = relatedTerms.some(term => 
+          product.name.toLowerCase().includes(term)
+        );
+        const descriptionMatch = relatedTerms.some(term => 
+          product.description.toLowerCase().includes(term)
+        );
+        
+        if (nameMatch || descriptionMatch) {
+          return true;
+        }
+      }
     }
+    
+    return false;
+  };
+
+  const handleSearch = () => {
+    performContextualSearch(searchTerm);
   };
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     if (e.target.value === '') {
-      fetchProducts();
+      setProducts(originalProducts);
     }
   };
 
@@ -110,7 +194,7 @@ function ProductsList() {
                   value={searchTerm}
                   onChange={handleSearchChange}
                   onKeyPress={handleKeyPress}
-                  placeholder="Search products by name or description..."
+                  placeholder="Search products (try: 'need something to sit' or 'store my clothes')"
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <div className="absolute inset-y-0 right-0 flex py-1.5 pr-1.5">
@@ -175,7 +259,7 @@ function ProductsList() {
               <button 
                 onClick={() => {
                   setSearchTerm('');
-                  fetchProducts();
+                  setProducts(originalProducts);
                 }}
                 className="text-blue-600 hover:text-blue-800 flex items-center"
               >
@@ -213,7 +297,7 @@ function ProductsList() {
             <button
               onClick={() => {
                 setSearchTerm('');
-                fetchProducts();
+                setProducts(originalProducts);
               }}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
@@ -227,31 +311,21 @@ function ProductsList() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {sortedProducts.map((product) => (
                 <div key={product.id} className="glassmorphism bg-white bg-opacity-95 rounded-xl shadow-md overflow-hidden card-hover">
-                  {product.image_url ? (
-                    <div className="relative overflow-hidden">
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-full h-56 object-cover object-center hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute top-2 right-2">
-                        <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold px-3 py-1 rounded-full text-sm shadow-md">
-                          ${parseFloat(product.price).toFixed(2)}
-                        </span>
-                      </div>
+                  <div className="relative overflow-hidden">
+                    <img
+                      src={product.image_url || FALLBACK_IMAGE}
+                      alt={product.name}
+                      className="w-full h-56 object-cover object-center hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        e.target.src = FALLBACK_IMAGE;
+                      }}
+                    />
+                    <div className="absolute top-2 right-2">
+                      <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold px-3 py-1 rounded-full text-sm shadow-md">
+                        ₹{parseFloat(product.price).toFixed(2)}
+                      </span>
                     </div>
-                  ) : (
-                    <div className="w-full h-56 bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center relative">
-                      <svg className="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <div className="absolute top-2 right-2">
-                        <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold px-3 py-1 rounded-full text-sm shadow-md">
-                          ${parseFloat(product.price).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                   <div className="p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-2">{product.name}</h3>
                     <p className="text-gray-600 mb-4 text-sm line-clamp-3">{product.description}</p>
@@ -275,26 +349,21 @@ function ProductsList() {
               {sortedProducts.map((product) => (
                 <div key={product.id} className="glassmorphism bg-white bg-opacity-95 rounded-xl shadow-md overflow-hidden card-hover">
                   <div className="flex flex-col md:flex-row">
-                    {product.image_url ? (
-                      <div className="md:w-1/4 relative">
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-48 md:h-full object-cover object-center"
-                        />
-                      </div>
-                    ) : (
-                      <div className="md:w-1/4 bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center">
-                        <svg className="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
+                    <div className="md:w-1/4 relative">
+                      <img
+                        src={product.image_url || FALLBACK_IMAGE}
+                        alt={product.name}
+                        className="w-full h-48 md:h-full object-cover object-center"
+                        onError={(e) => {
+                          e.target.src = FALLBACK_IMAGE;
+                        }}
+                      />
+                    </div>
                     <div className="p-6 md:w-3/4">
                       <div className="flex justify-between items-start">
                         <h3 className="text-xl font-bold text-gray-900">{product.name}</h3>
                         <span className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold px-3 py-1 rounded-full text-sm">
-                          ${parseFloat(product.price).toFixed(2)}
+                          ₹{parseFloat(product.price).toFixed(2)}
                         </span>
                       </div>
                       <p className="text-gray-600 mt-3">{product.description}</p>
