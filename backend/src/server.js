@@ -19,6 +19,11 @@ app.use(express.json());
 app.use('/products', productRoutes);
 
 // Health check endpoint
+app.get('/', (req, res) => {
+  res.send('Server is running!!!');
+});
+
+// Health check endpoint for production to keep the server alive (as in render server goes to sleep after 15 minutes of inactivity)
 app.get('/health', (req, res) => {
   res.status(200).send('Server is running');
 });
