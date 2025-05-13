@@ -16,7 +16,7 @@ function ProductsList() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const API_URL = import.meta.env.MODE === 'production' ? import.meta.env.VITE_API_URL : 'http://localhost:5000/products';
+      const API_URL = import.meta.env.MODE === 'production' ? import.meta.env.VITE_API_URL + '/products' : 'http://localhost:5000/products';
       const response = await axios.get(API_URL);
       setProducts(response.data);
       setOriginalProducts(response.data);

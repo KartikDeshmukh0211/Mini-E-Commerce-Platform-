@@ -31,7 +31,7 @@ function ProductForm() {
     setMessage('');
     
     try {
-      const API_URL = import.meta.env.MODE === 'production' ? import.meta.env.VITE_API_URL : 'http://localhost:5000/products';
+      const API_URL = import.meta.env.MODE === 'production' ? import.meta.env.VITE_API_URL + '/products' : 'http://localhost:5000/products';
       await axios.post(API_URL, product);
       setMessage('Product added successfully!');
       setProduct({
