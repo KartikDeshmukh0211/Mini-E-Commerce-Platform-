@@ -16,6 +16,7 @@ A simple e-commerce web application with product submission and display function
 - Option to toggle between List view and grid View for available products
 - Product sorting on the bases of Newest, Oldest, Name, Price : Low - High and Price : High to Low
 - UI with some animations
+- Responsive for all screens
 
 
 ## Tech Stack
