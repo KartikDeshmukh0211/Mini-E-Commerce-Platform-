@@ -9,6 +9,15 @@ A simple e-commerce web application with product submission and display function
 - Product search functionality
 - PostgreSQL database storage
 
+## Extra Features
+
+- Image preview option before adding product.
+- Product search functionality using Contextual Search 
+- Option to toggle between List view and grid View for available products
+- Product sorting on the bases of Newest, Oldest, Name, Price : Low - High and Price : High to Low
+- UI with some animations
+
+
 ## Tech Stack
 
 - **Frontend:** React.js, Tailwind CSS
